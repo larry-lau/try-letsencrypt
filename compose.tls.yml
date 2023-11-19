@@ -1,13 +1,11 @@
-version: '3.5'
-
 # Example Docker Compose config file for traefik with letsencrypt using TLS Challenge (Apple macOS)
 
 services:
   traefik:
     # The official v2 Traefik docker image
-    image: traefik:v2.9
-    # Enables the web UI and tells Traefik to listen to docker
+    image: traefik:v2.10
     command: 
+      - "--log.level=DEBUG"
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
@@ -15,17 +13,14 @@ services:
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
       - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme-tls.json"
     ports:
-      # The HTTP port
       - "80:80"
       - "443:443"
-      # The Web UI (enabled by --api.insecure=true)
       - "8080:8080"
     volumes:
-      - "${TLS_PATH}:/letsencrypt"
-      # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
+      - "${CERT_PATH:-./letsencrypt}:/letsencrypt"
 
   whoami:
     image: traefik/whoami:latest
@@ -34,6 +29,5 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.whoami.rule=Host(`${HOST}`)"
-      - "traefik.http.routers.whoami.entrypoints=web, websecure"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
       - "traefik.http.routers.whoami.tls.certresolver=myresolver"
-
